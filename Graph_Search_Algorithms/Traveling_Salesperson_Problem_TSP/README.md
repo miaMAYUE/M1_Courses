@@ -81,3 +81,23 @@ This representation cleverly avoids cycles in the search space. A state is uniqu
 
 ### Time Measurement
 - Runtime was measured within the program using standard library functions for tracking wall-clock time.
+
+
+# Note
+DFS：如果到limit边界的最后一次递归都没找到goal，则不满足if (b <= limit)，直接new_limit = b，然后把（false，b）返回给上一层，再探索当前节点的兄弟节点。如果是递归到底都没找到（还没达到limit），则返回（false，∞），再探索当前节点的兄弟节点。
+
+b = c + h(child) 是从当前节点到子节点的（g+h），b = nb + c 是从root到子节点的（g+h），所以从递归底层一层一层往回返时，每一层的b都会变成从当前节点到子节点的（g+h），最终变成从root计算的（g+h）。
+
+new_limit 最终会是在本次搜索中，所有刚好超过当前limit的路径里，f 值最小的那一个，这个值来自最底层节点，且这个值将作为下一次迭代的阈值。其中，“最底层”为“f 值刚好超过 limit 的那一层边界”。
+
+怎么确保IDA*每次调用DFS时，limit都比上一次增大：
+因为上一次递归到底时，最后一层的 b = c + h(child)
+不再符合 b <= limit，即 new_limit > 当前层的limit。
+而new_limit返回给上一层的nb，上一层为当前层后，由 b = nb + c 可知仍有 b > 当前层的limit。
+而对于这一层展开的节点们：第一个节点new_limit = min(b, ∞)，必然大于当前层的limit；
+除第一个以外的节点们：new_limit = min(各自的b, 由前序节点传来的new_limit)，已证各自的b > 当前层的limit，所以仍能保持new_limit > 当前层的limit。所以当一层一层追溯回从root开始计算的c时，仍有new_limit > limit。
+
+在IDA*的多次DFS调用中，每一次新的（更深的）调用都会完全重复之前所有（更浅的）调用的工作。
+but，在一个典型的搜索树中，绝大多数的节点都位于最深的几层。
+优点：IDA*本质上是深度优先搜索，它只需要存储当前路径上的节点，所以其内存使用量与搜索深度成线性关系（O(bd)）。
+而A*算法需要一个OPEN列表来存储所有待扩展的节点，在最坏的情况下，其内存使用量与搜索空间中的节点总数成正比，可能是指数级的（O(b^d)）。
