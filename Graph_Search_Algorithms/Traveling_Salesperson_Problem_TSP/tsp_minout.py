@@ -51,18 +51,35 @@ def is_goal(node):
     # Returns: bool: True if the state is the goal, False otherwise.
     return node.num_visited == N and node.current_id == 0
 
+def min_out_h(node):
+    # Calculates the Min-out h for a given state.
+    # The Min-out h is the minimum cost of an edge from the current city to any unvisited city.
+    # Args: node: The state for which to calculate the heuristic.
+    # Returns: int: The estimated cost from the node to the goal.
+    if is_goal(node):
+        return 0
+    if node.num_visited == N:
+        return COST_MATRIX[node.current_id][0]
+    min_cost = math.inf
+    for city_id in range(N):
+        if city_id not in node.visited:
+            cost = COST_MATRIX[node.current_id][city_id]
+            if cost < min_cost:
+                min_cost = cost
+    return min_cost if min_cost != math.inf else 0
+
 def dfs(node, path, limit):
     # Performs the core recursive depth-limited search for IDA*.
-    # With h(n)=0, the f-value is simply the g-value.
+    # The search is pruned based on the f-value (g + h).
     # Args:
-    # node: The current state to process.
+    # node (State): The current state to process.
     # path (list[State]): The path taken to reach the current node.
     # limit (int): The current cost limit for the f-value.
     # Returns: tuple[bool, int]: A tuple containing:
     # A boolean indicating if a solution was found.
-    # The cost of the solution if found, or the minimum f-value that exceeded the limit.
+    # the cost of the solution if found, or the minimum f-value that exceeded the limit.
     global expanded_nodes
-    f_node = node.g
+    f_node = node.g + min_out_h(node)
     if f_node > limit:
         return (False, f_node)
     if is_goal(node):
@@ -74,15 +91,14 @@ def dfs(node, path, limit):
         is_solved, value = dfs(child, path + [child], limit)
         if is_solved:
             return (True, value)
-        new_limit = min(new_limit, value) 
+        new_limit = min(new_limit, value)
     return (False, new_limit)
-
 def ida_star(root):
     # The main control loop for the Iterative Deepening A* (IDA*) search.
     # It repeatedly calls DFS with an increasing cost limit (f-value).
     # Args: root: The initial state of the search.
     # Returns: int or str: The optimal cost of the tour if found, otherwise "NO_SOLUTION".
-    limit = 0
+    limit = min_out_h(root)
     path = [root]
     while True:
         solved, new_limit = dfs(root, path, limit)
